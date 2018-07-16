@@ -1,0 +1,5 @@
+/.idea
+/app/vendor
+/app/node_modules/
+.DS_Store
+*.tpl.php
