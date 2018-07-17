@@ -1,11 +1,11 @@
 This is an ongoing project, some features may not be fully complete or documented.
 
 
-You can set your DOCUMENT_ROOT to the base of your project or to a specific project under `apps/{projectName}`
+You can set your `DOCUMENT_ROOT` to the base of your project or to a specific project under `apps/{projectName}`
 
-It is recommended, you set your DOCUMENT_ROOT to a particular app as to not expose your configuration directory.
+It is recommended, you set your `DOCUMENT_ROOT` to a particular app as to not expose your configuration directory.
 
-To run the sample-project, run `composer install`
+To run the sample-project, run `composer install` and install the sql file `sample.sql`
 
 `CONFIG`
 
