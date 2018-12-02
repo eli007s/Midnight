@@ -4,11 +4,23 @@
 
 		private static $_config    = [];
 		private static $_namespace = '\\';
+		private static $_view      = [];
+		private static $_database  = [];
 		private static $_queue     = [];
+		private static $_from      = [];
 
 		public static function get($key = null) {
 
-		    return $key == null ? self::$_config : self::$_config[$key];
+		    $where = empty(self::$_from) ? self::$_config : self::$_from;
+
+		    return $key == null ? $where : $where[$key];
+        }
+
+        public function from($from = null) {
+
+		    self::$_from = $from == null ? self::$_config['apps'] : self::$_config['apps'][$from];
+
+            return new self();
         }
 
         public static function load($config = null) {
@@ -34,8 +46,7 @@
 
                 if (is_array($v)) {
 
-                    self::$_config = array_unique(array_merge_recursive(self::$_config, $v), SORT_REGULAR);
-                    //self::$_config = array_map("unserialize", array_unique(array_map("serialize", self::$_config)));
+                    self::$_config = array_merge(self::$_config, $v);
                 }
 
                 if (strpos($v, '{') !== false) {
@@ -44,8 +55,7 @@
 
                     if (is_array($v)) {
 
-                        self::$_config = array_unique(array_merge_recursive(self::$_config, $v), SORT_REGULAR);
-                        //self::$_config = array_map("unserialize", array_unique(array_map("serialize", self::$_config)));
+                        self::$_config = array_merge(self::$_config, $v);
                     }
                 }
 
@@ -63,13 +73,31 @@
 
                     if (is_array($contents)) {
 
-                        self::$_config = array_merge_recursive(self::$_config, $contents);
-                        //self::$_config = array_map("unserialize", array_unique(array_map("serialize", self::$_config)));
+                        self::$_config = array_merge(self::$_config, $contents);
                     }
                 }
             }
 
 			return self::_translate(self::$_config);
+		}
+
+		public static function app($app) {
+
+			$app    = strtolower($app);
+			$return = [];
+			$config = self::_array_change_key_case_recursive(self::$_config['apps']);
+
+			if (isset($config[$app])) {
+
+				$return = $config[$app];
+            }
+
+			return $return;
+		}
+
+		public static function apps() {
+
+			return isset(self::$_config['apps']) ? self::$_config['apps'] : [];
 		}
 
 		public static function setNamespace($ns) {
@@ -82,20 +110,15 @@
 			return self::$_namespace == '\\' ? self::$_namespace : self::$_namespace . '\\';
 		}
 
-		public static function set($key, $val = null) {
+		public static function setView($view) {
 
-		    if (is_string($key) && !is_null($val)) {
+			self::$_view = $view;
+		}
 
-		        self::$_config[$key] = $val;
+		public static function getView() {
 
-		    } else {
-
-		        $config = $key;
-
-                self::$_config = array_unique(array_merge_recursive(self::$_config, $config), SORT_REGULAR);
-                //self::$_config = array_map("unserialize", array_unique(array_map("serialize", self::$_config)));
-            }
-        }
+			return self::$_view;
+		}
 
 		public static function getSettings() {
 

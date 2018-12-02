@@ -3,3 +3,5 @@
 /app/node_modules/
 .DS_Store
 *.tpl.php
+/vendor
+compiled

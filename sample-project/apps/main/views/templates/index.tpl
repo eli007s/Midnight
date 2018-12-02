@@ -1,5 +1,5 @@
 {!block "content"!}
-<p>Hello, your a little about yourself</p>
+<p>Hello, your tell us a little about yourself</p>
 <form action="/bio/create" method="post">
     <div class="form-group">
         <label for="fname">First Name</label>

@@ -26,7 +26,6 @@
 
                         $rawArray[0] = ucfirst($rawArray[0]);
 
-
                         $fileNames  = [implode('_', $rawArray)];
 
                     } else {
@@ -97,8 +96,3 @@
 			}
 		}
 	}
-
-
-
-
-

@@ -71,14 +71,7 @@
 
             if ($buildQuery == true) {
 
-		        if (isset($options['json']) && $options['json'] == true) {
-
-		            $post = json_encode($post);
-
-		        } else {
-
-                    $post = is_array($post) ? http_build_query($post) : urlencode($post);
-                }
+                $post = is_array($post) ? http_build_query($post) : urlencode($post);
             }
 
 			self::$_opt['CURLOPT_POST']       = 1;
@@ -91,18 +84,7 @@
 		    
 			if (!is_array($get)) {
 
-			    $get[] = $get;
 			}
-
-            self::$_opt['CURLOPT_URL'] .= '?';
-
-			foreach ($get as $k => $v) {
-
-			    self::$_opt['CURLOPT_URL'] .= $k . '=' . $v . '&';
-            }
-
-            self::$_opt['CURLOPT_URL'] = rtrim(self::$_opt['CURLOPT_URL'], '&');
-
 
 			return self::$_init;
 		}

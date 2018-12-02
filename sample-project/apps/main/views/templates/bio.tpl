@@ -1,7 +1,7 @@
 {!block "content"!}
-this is the bio page for {!$bio.fname!} {!$bio.lname!}
+this is the bio page for <b>{!$bio.fname!} {!$bio.lname!}</b>
 <br /><br />
-<p>
+<pre>
     {!$bio.bio!}
-</p>
+</pre>
 {!/block!}

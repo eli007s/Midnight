@@ -1,5 +1,9 @@
 <?php
 
+    /**
+     * Set this to off in production
+     */
+
 	/**
 	 * Apply a global timezone, timezones are handled by the application settings
 	 */
@@ -23,6 +27,8 @@
 
 	if (is_file($controller)) {
 
+	    // in some php installs we get an error if instantiating a session if one has already been started
+        // so lets check if we are ok to start a new one...
 		if (session_id() == '') {
 
 			session_start();
@@ -32,6 +38,7 @@
 
 		$vendorDir = '';
 
+		// if composer has installed an files lets include its autoload
         if (file_exists(__DIR__ . DS . 'vendor' . DS . 'autoload.php')) {
 
             $vendorDir = __DIR__ . DS . 'vendor';
@@ -55,14 +62,17 @@
             spl_autoload_register(['JXP_Autoloader', 'autoload']);
         }
 
-		$jinxup = new Jinxup();
+        $jinxup = new Jinxup();
+        $errors = 1;
+
+        ini_set('display_errors', $errors);
+        ini_set('display_startup_errors', $errors);
+        error_reporting(E_ALL);
 
         if (file_exists(__DIR__ . DS . '.env.php')) {
 
             require_once __DIR__ . DS . '.env.php';
         }
-
-        $jinxup->init();
 
 	} else {
 
@@ -103,11 +113,11 @@ EOF;
 				</div>
 				<div>
 					<p>Or download a fresh copy</p>
-					<p><a href="https://www.jinxup.com/download/latest" id="download-jinxup">Download Latest</a></p>
+					<p><a href="https://www.jinxup.io/download/latest" id="download-jinxup">Download Latest</a></p>
 					<p>
 						For more assistance, please visit
-						<a href="https://www.jinxup.com/support/installation/">
-							https://www.jinxup.com/support/installation
+						<a href="https://www.jinxup.io/support/installation/">
+							https://www.jinxup.io/support/installation (coming soon)
 						</a>
 					</p>
 				</div>

@@ -1,5 +1,11 @@
 <?php
 
+/**
+ * Class Jinxup
+
+ * @property JXP_View view
+
+ */
     class Jinxup {
 
         private $_route     = [];
@@ -7,6 +13,12 @@
         private $_registry  = [];
         private $_namespace = '\\';
         private $_routed    = false;
+
+        public function __construct() {
+
+            $this->error->register();
+            $this->config(__DIR__ . DS . '..' . DS . '..' . DS . 'config');
+        }
 
         public function __toString() {
 
@@ -35,46 +47,22 @@
             return $return;
         }
 
-        public function init() {
+        public function load() {
 
-            $this->error->register();
-            $this->config->load(__DIR__ . DS . '..' . DS . '..' . DS . 'config' . DS . 'settings.json');
+            $apps = $this->app->discover();
 
-            $config = $this->config->getSettings();
+            if (count($apps) == 1) {
 
-            if (is_null($this->app->loaded())) {
+                $this->app($apps[0]);
 
-                if (isset($config['default-app'])) {
+            } else {
 
-                    $this->app($config['default-app']);
+                $fileName = explode(DS, $_SERVER['SCRIPT_FILENAME']);
 
-                } else {
+                if (in_array($fileName[count($fileName) - 2], $apps)) {
 
-                    $apps = $this->app->discover();
-
-                    if (count($apps) == 0) {
-
-                        throw new exception ('no apps detected');
-                    }
-
-                    if (count($apps) == 1) {
-
-                        $this->app($apps[0]);
-                    }
-
-                    if (count($apps) > 1) {
-
-                        throw new exception ('no default app detected');
-                    }
+                    $this->app($fileName[count($fileName) - 2]);
                 }
-            }
-        }
-
-        public function load($app = null) {
-
-            if (!is_null($app)) {
-
-                $this->app($app);
             }
 
             if (!in_array($_SERVER['REQUEST_URI'], $this->_routes)) {
@@ -116,15 +104,13 @@
 
             if (is_dir(APPS_DIR . DS . $app)) {
 
-                $this->app->set($app);
-
-                $this->config->load(__DIR__ . DS . '..' . DS . '..' . DS . 'config' . DS . '' . $app . '.json');
-                $this->autoloader->register(APPS_DIR . DS . $app);
-
                 if (!defined('APP_DIR')) {
 
                     define('APP_DIR', APPS_DIR . DS . $app);
                 }
+
+                $this->autoloader->register(APP_DIR);
+                $this->app->set($app);
 
             } else {
 
@@ -155,26 +141,6 @@
             }
 
             return $this;
-        }
-
-        /**
-         * @param $env string
-         */
-        public function env($env) {
-
-            $this->config->set('env', $env);
-
-            $config = $this->config->get();
-
-            foreach ($config as $k => $v) {
-
-                if (isset($config[$k][$this->config->get('env')])) {
-
-                    $config[$k] = $config[$k][$this->config->get('env')];
-                }
-            }
-
-            $this->config->set($config);
         }
 
         /**
@@ -273,12 +239,18 @@
 
                     $stack  = [];
                     $config = $this->config->get();
+                    $config = isset($config['apps'][$this->app->loaded()]) ? $config['apps'][$this->app->loaded()] : [];
 
                     if (!empty($config)) {
 
                         if (isset($config['namespace']) && !empty($config['namespace'])) {
 
                             $this->_namespace = $config['namespace'];
+                        }
+
+                        if (isset($config['view'])) {
+
+                            $this->config->setView($config['view']);
                         }
 
                         if (isset($config['init'])) {
@@ -299,43 +271,33 @@
 
                                         if ($this->_route['controller']['raw'] == $v['controller']['name'] || $this->_route['controller']['translated'] == $v['controller']['name']) {
 
-                                            if (isset($v['controller']['route-to-app']) && $v['controller']['route-to-app'] == 'true') {
+                                            if (isset($v['controller']['view'])) {
 
-                                                if (isset($v['controller']['app'])) {
+                                                $this->config->setView($v['controller']['view']);
+                                            }
 
-                                                    $this->app($v['controller']['app']);
+                                            $namespace = isset($v['controller']['namespace']) && !empty($v['controller']['namespace']) ? $v['controller']['namespace'] : $this->_namespace;
+
+                                            if (isset($v['controller']['init'])) {
+
+                                                $disabled = false;
+
+                                                if (isset($v['controller']['init']['disabled']) && ($v['controller']['init']['disabled'] == 1 || (string)$v['controller']['init']['disabled'] == 'true')) {
+
+                                                    $disabled = true;
                                                 }
 
-                                            } else {
+                                                if ($disabled == false) {
 
-                                                if (isset($v['controller']['view'])) {
+                                                    if (isset($v['controller']['init'])) {
 
-                                                    $this->config->set('view', $v['controller']['view']);
-                                                }
-
-                                                $namespace = isset($v['controller']['namespace']) && !empty($v['controller']['namespace']) ? $v['controller']['namespace'] : $this->_namespace;
-
-                                                if (isset($v['controller']['init'])) {
-
-                                                    $disabled = false;
-
-                                                    if (isset($v['controller']['init']['disabled']) && ($v['controller']['init']['disabled'] == 1 || (string)$v['controller']['init']['disabled'] == 'true')) {
-
-                                                        $disabled = true;
+                                                        $stack['controller']['init'] = $v['controller']['init'];
                                                     }
 
-                                                    if ($disabled == false) {
-
-                                                        if (isset($v['controller']['init'])) {
-
-                                                            $stack['controller']['init'] = $v['controller']['init'];
-                                                        }
-
-                                                        $stack['controller']['invoke'] = $namespace . '\\' . $this->_route['controller']['translated'];
-                                                    }
+                                                    $stack['controller']['invoke'] = $namespace . '\\' . $this->_route['controller']['translated'];
                                                 }
                                             }
-                                         }
+                                        }
                                     }
                                 }
 
@@ -347,7 +309,7 @@
                                         {
                                             if (isset($v['action']['view'])) {
 
-                                                $this->config->set('view', $v['action']['view']);
+                                                $this->config->setView($v['action']['view']);
                                             }
 
                                             if (isset($v['action']['init']))
@@ -465,6 +427,13 @@
                     }
                 }
             }
+
+            return $this;
+        }
+
+        public function config($config) {
+
+            $this->config->load($config);
 
             return $this;
         }

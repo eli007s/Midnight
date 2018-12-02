@@ -1,6 +1,6 @@
 <?php
 
-	class JXP_DB extends Jinxup
+	class JXP_DB
 	{
 		/**
 		 * @var array
@@ -26,26 +26,12 @@
 		 */
 		private $_init = null;
 
-        /**
-         * @var string
-         * @access private
-         */
-		private static $_env = 'live';
-
-        /**
-         * @var string
-         * @access private
-         */
-        private static $_mode = 'read';
-
 		/**
 		 * Return the alias used for this instance
 		 */
 		public function __construct() {
 
 			$this->alias = self::$_alias;
-
-			self::$_env = $this->config->get('env');
 		}
 
 		/**
@@ -62,19 +48,12 @@
 		 * @param string $name
 		 * @param string $user
 		 * @param string $pass
-         * @param string $env
-         * @param string $driver
 		 * @param int $port
 		 * @return object
 		 */
-		public static function fuel($alias, $host = 'localhost', $name = null, $user = 'root', $pass = null, $env = null, $port = 3306, $driver = 'PDO') {
+		public static function fuel($alias, $host = 'localhost', $name = null, $user = 'root', $pass = null, $port = 3306) {
 
-		    if (is_null($env)) {
-
-		        $env = self::$_env;
-            }
-
-			$fuel = ['host' => $host, 'name' => $name, 'user' => $user, 'pass' => $pass, 'port' => $port, 'driver' => $driver, 'env' => $env];
+			$fuel = ['host' => $host, 'name' => $name, 'user' => $user, 'pass' => $pass, 'port' => $port];
 
 			return self::ignite($alias, $fuel);
 		}
@@ -104,64 +83,38 @@
 		public static function ignite($alias = null, $fuel = []) {
 
 			$config  = !empty($fuel) ? [$alias => $fuel] : [];
-			$host    = [];
+			$host    = '';
 			$name    = '';
 			$user    = '';
 			$pass    = '';
-			$env     = '';
 			$file    = '';
 			$port    = 3306;
 			$store   = '';
 			$driver  = 'PDO';
 			$_alias  = null;
-			$_driver1 = null;
-			$_driver2 = null;
+			$_driver = null;
 
-			if (!isset($config[$alias])) {
+			if (isset($config[$alias])) {
 
-			    $c = JXP_Config::get('database');
-                //echo '<pre>', print_r(JXP_Config::get('env'), true), '</pre>';
-                //$c = $c[JXP_Config::get('env')];
-                //echo '<pre>', print_r($c, true), '</pre>';
-			    $alias = $c['alias'];
-
-			    $host = [
-			        'read' => isset($c['host']['read']) ? $c['host']['read'] : $c['host'],
-                    'write' => isset($c['host']['write']) ? $c['host']['write'] : $c['host']
-                ];
-
-			    $config[$c['alias']] = [
-			        'alias' => $c['alias'],
-                    'host'  => $host,
-                    'name'  => $c['name'],
-                    'user'  => $c['user'],
-                    'pass'  => $c['pass'],
-                    'env'   => self::$_env,
-                    'port'  => isset($c['port']) ? $c['port'] : 3306,
-                    'driver' => isset($c['driver']) ? $c['driver'] : 'PDO'
-                ];
-
-			} else {
-
-                $config[$alias]['host'] = [
-                    'read' => isset($config[$alias]['host']['read']) ? $config[$alias]['host']['read'] : $config[$alias]['host'],
-                    'write' => isset($config[$alias]['host']['write']) ? $config[$alias]['host']['write'] : $config[$alias]['host']
-                ];
+				extract($config[$alias]);
             }
-
-            extract($config[$alias]);
 
 			if (!is_null($driver)) {
 
 				switch (strtolower($driver)) {
+
+					case 'mssql':
+
+						$_driver = "mssql:server=" . $host . ";database=" . $name;
+
+						break;
 
 					case 'sqlite':
 
 						if (extension_loaded('sqlite3') || extension_loaded('pdo_sqlite')) {
 
 							$file    .= !empty($store) || !is_null($store) ? getcwd() . DS . trim($store, '/') : ':memory:';
-							$_driver1  = "sqlite:{$file}";
-                            $_driver2  = "sqlite:{$file}";
+							$_driver  = "sqlite:{$file}";
 
 						} else {
 
@@ -173,27 +126,14 @@
 					case 'pdo':
 					default:
 
-						$_driver1 = "mysql:host=" . $host['read'] . ";port=" . $port . ";dbname=" . $name;
-                        $_driver2 = "mysql:host=" . $host['write'] . ";port=" . $port . ";dbname=" . $name;
+						$_driver = "mysql:host=" . $host . ";port=" . $port . ";dbname=" . $name;
 
 						break;
 				}
 			}
 
             self::$_alias = $alias;
-
-            $dbObj['read'] = new JXP_DB_PDO($alias, $_driver1, $user, $pass);
-
-			if ($config[$alias]['host']['read'] =! $config[$alias]['host']['write']) {
-
-                $dbObj['write'] = new JXP_DB_PDO($alias, $_driver2, $user, $pass);
-
-			} else {
-
-                $dbObj['write'] = $dbObj['read'];
-            }
-
-			self::$_database[$alias] = $dbObj;
+			self::$_database[$alias] = !is_null($_driver) ? new JXP_DB_PDO($alias, $_driver, $user, $pass) : [];
 
 			return self::$_database[$alias];
 		}
@@ -203,59 +143,79 @@
 		 * @param array $params
 		 * @return object
 		 */
-		public static function __callStatic($alias, $params) {
+		public static function __callStatic($alias, $params)
+		{
+			$return = null;
 
-            $return = null;
+			if ($alias == 'using')
+			{
+				if (isset($params[0]))
+					$return = self::_using($params[0]);
 
-            if (empty(self::$_database)) {
+			} else {
 
-                self::ignite();
-            }
+				self::$_alias = $alias;
 
-            switch ($alias) {
+				if (!isset(self::$_database[$alias]))
+					self::ignite($alias);
 
-                case 'log':
+				$dbObj = self::$_database[$alias];
 
-                    $alias = 'log';
+				if (method_exists($dbObj, $alias))
+				{
+					if (count($params) == 4)
+						$return = $dbObj->{$alias}($params[0], $params[1], $params[2], $params[3]);
+					else if (count($params) == 3)
+						$return = $dbObj->{$alias}($params[0], $params[1], $params[2]);
+					else if (count($params) == 2)
+						$return = $dbObj->{$alias}($params[0], $params[1]);
+					else if (count($params) == 1)
+						$return = $dbObj->{$alias}($params[0]);
+					else
+						$return = $dbObj->{$alias}();
 
-                    break;
+				} else {
 
-                default:
+					if (!empty($dbObj))
+					{
+						if (method_exists($dbObj->getConnection(), $alias))
+						{
+							$dbObj = $dbObj->getConnection();
 
-                    self::$_alias = $alias;
+							if (count($params) == 4)
+								$return = $dbObj->{$alias}($params[0], $params[1], $params[2], $params[3]);
+							else if (count($params) == 3)
+								$return = $dbObj->{$alias}($params[0], $params[1], $params[2]);
+							else if (count($params) == 2)
+								$return = $dbObj->{$alias}($params[0], $params[1]);
+							else if (count($params) == 1)
+								$return = $dbObj->{$alias}($params[0]);
+							else
+								$return = $dbObj->{$alias}();
 
-                    $alias = 'query';
+						} else {
 
-                    self::_mode($params[0]);
+							if (!empty($params))
+							{
+								if (count($params) == 4)
+									$return = $dbObj->query($params[0], $params[1], $params[2], $params[3]);
+								else if (count($params) == 3)
+									$return = $dbObj->query($params[0], $params[1], $params[2]);
+								else if (count($params) == 2)
+									$return = $dbObj->query($params[0], $params[1]);
+								else if (count($params) == 1)
+									$return = $dbObj->query($params[0]);
+								else
+									$return = $dbObj->query();
 
-                    break;
-            }
+							} else {
 
-            $dbObj = self::$_database[self::$_alias][self::$_mode];
-
-            if (method_exists($dbObj, $alias))  {
-
-                if (count($params) == 4) {
-
-                    $return = $dbObj->{$alias}($params[0], $params[1], $params[2], $params[3]);
-
-                } else if (count($params) == 3) {
-
-                    $return = $dbObj->{$alias}($params[0], $params[1], $params[2]);
-
-                } else if (count($params) == 2) {
-
-                    $return = $dbObj->{$alias}($params[0], $params[1]);
-
-                } else if (count($params) == 1) {
-
-                    $return = $dbObj->{$alias}($params[0]);
-
-                } else {
-
-                    $return = $dbObj->{$alias}();
-                }
-            }
+								$return = new self();
+							}
+						}
+					}
+				}
+			}
 
 			return $return;
 		}
@@ -269,53 +229,96 @@
 
 			$return = null;
 
-            if (empty(self::$_database)) {
+			if ($alias == 'using')
+			{
+				if (isset($params[0])) {
 
-                self::ignite();
-            }
-
-            switch ($alias) {
-
-                case 'log':
-
-                    $alias = 'log';
-
-                    break;
-
-                default:
-
-                    $alias = 'query';
-
-                    self::_mode($params[0]);
-
-                    break;
-            }
-
-            $dbObj = self::$_database[self::$_alias][self::$_mode];
-
-            if (method_exists($dbObj, $alias))  {
-
-                if (count($params) == 4) {
-
-                    $return = $dbObj->{$alias}($params[0], $params[1], $params[2], $params[3]);
-
-                } else if (count($params) == 3) {
-
-                    $return = $dbObj->{$alias}($params[0], $params[1], $params[2]);
-
-                } else if (count($params) == 2) {
-
-                    $return = $dbObj->{$alias}($params[0], $params[1]);
-
-                } else if (count($params) == 1) {
-
-                    $return = $dbObj->{$alias}($params[0]);
-
-                } else {
-
-                    $return = $dbObj->{$alias}();
+                    $return = self::_using($params[0]);
                 }
-            }
+
+			} else {
+
+			    switch ($alias) {
+
+                    case 'query' :
+
+                        self::$_alias = 'default';
+
+					    if (!isset(self::$_database['default'])) {
+
+                            self::ignite('default');
+                        }
+
+                        break;
+
+                    case 'log':
+
+                        self::$_alias = $params[0];
+
+                        $alias = 'log';
+
+                        break;
+
+
+                    default:
+
+                        //self::$_alias = $alias;
+
+                        $alias = 'query';
+
+                        if (!isset(self::$_database[self::$_alias])) {
+
+                            self::ignite(self::$_alias);
+                        }
+
+                        break;
+                }
+
+				$dbObj = self::$_database[self::$_alias];
+
+				if (method_exists($dbObj, $alias))  {
+
+					if (count($params) == 4)
+						$return = $dbObj->{$alias}($params[0], $params[1], $params[2], $params[3]);
+					else if (count($params) == 3)
+						$return = $dbObj->{$alias}($params[0], $params[1], $params[2]);
+					else if (count($params) == 2)
+						$return = $dbObj->{$alias}($params[0], $params[1]);
+					else if (count($params) == 1) {
+
+                        $return = $dbObj->{$alias}($params[0]);
+
+					} else {
+
+                        $return = $dbObj->{$alias}();
+                    }
+
+				} else {
+
+					if (!empty($dbObj))
+					{
+						if (method_exists($dbObj->getConnection(), $alias))
+						{
+							$dbObj = $dbObj->getConnection();
+
+							if (count($params) == 4)
+								$return = $dbObj->{$alias}($params[0], $params[1], $params[2], $params[3]);
+							else if (count($params) == 3)
+								$return = $dbObj->{$alias}($params[0], $params[1], $params[2]);
+							else if (count($params) == 2)
+								$return = $dbObj->{$alias}($params[0], $params[1]);
+							else if (count($params) == 1)
+								$return = $dbObj->{$alias}($params[0]);
+							else
+								$return = $dbObj->{$alias}();
+
+						} else {
+
+							$return = $dbObj;
+						}
+					}
+				}
+			}
 
 			return $return;
 		}
@@ -324,28 +327,11 @@
 		 * @desc Destroy connection
 		 * @param string $alias
 		 */
-		public static function destroy($alias = null) {
-
-			if (is_null($alias)) {
-
+		public static function destroy($alias = null)
+		{
+			if (is_null($alias))
 				self::$_database = null;
-
-			} else {
-
+			else
 				unset(self::$_database[$alias]);
-            }
 		}
-
-		private static function _mode($query) {
-
-            if (preg_match('/^(select|describe|desc|call|show)/im', $query)) {
-
-                self::$_mode = 'read';
-            }
-
-            if (preg_match('/^(insert|delete|update|drop|create)/im', $query)) {
-
-                self::$_mode = 'write';
-            }
-        }
 	}

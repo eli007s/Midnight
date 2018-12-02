@@ -6,26 +6,21 @@
 
     require_once __DIR__ . '/../../jinxup.php';
 
-    /*
-     * Determine what environment you are running, this is useful if your configuration has environment specific entries
-     */
-    $env = 'live';
-    $env = preg_match('/staging\./', $_SERVER['HTTP_HOST']) ? 'staging' : $env;
-    $env = $_SERVER['SERVER_ADDR'] == '127.0.0.1' ? 'dev' : $env;
-
-    /*
-     * We pass the environment to the framework for internal referencing
-     */
-    $jinxup->env($env);
-
+    $env    = 'dev';
     $config = $jinxup->config->get();
+    $config = $config['database'];
 
-    define('AWS_ACCESS_KEY_ID', $config['aws']['key']);
-    define('AWS_SECRET_ACCESS_KEY', $config['aws']['secret']);
-    define('AWS_REGION', $config['aws']['region']);
-    define('ENV', $env);
+    $jinxup->db->fuel(
+        $config[$env]['alias'],
+        $config[$env]['host'],
+        $config[$env]['name'],
+        $config[$env]['user'],
+        $config[$env]['pass']
+    );
 
     /*
      * Load the app
      */
+    $jinxup->view->engine('smarty');
+
     $jinxup->load();

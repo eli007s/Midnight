@@ -32,17 +32,13 @@
 
 			foreach ($apps as $k => $v)  {
 
-				if (is_dir($v['path'] . DS . 'controllers') || file_exists($v['path'] . DS . 'index.php')) {
+				if (is_dir($v['path'] . DS . 'controllers')) {
 
                     unset($apps[$k]['ext']);
                     unset($apps[$k]['path']);
                     unset($apps[$k]['size']);
 
                     $apps[$k] = $v['name'];
-
-				} else {
-
-				    unset($apps[$k]);
                 }
 			}
 
