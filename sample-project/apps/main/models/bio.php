@@ -18,7 +18,7 @@
 
         public function create($fname, $lname, $bio) {
 
-            $id = $this->db->smaple('insert into users (fname, lname) values (:fname, :lname)', [
+            $id = $this->db->sample('insert into users (fname, lname) values (:fname, :lname)', [
                 'fname' => $fname,
                 'lname' => $lname
             ]);
