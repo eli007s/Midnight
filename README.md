@@ -1,7 +1,7 @@
 This is an ongoing project, some features may not be fully complete or documented.
 
 `TODO` 
-** updates core classes to make use of traits/interfaces/abstract approaches **
+** updates to core classes to make use of traits/interfaces/abstract approaches **
 
 You can set your `DOCUMENT_ROOT` to the base of your project or to a specific project under `apps/{projectName}`
 
